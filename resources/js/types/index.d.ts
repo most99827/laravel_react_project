@@ -3,6 +3,7 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    privileges: Record<string, any>;
 }
 
 export interface BreadcrumbItem {
@@ -16,10 +17,13 @@ export interface NavGroup {
 }
 
 export interface NavItem {
+
     title: string;
-    href: NonNullable<InertiaLinkProps['href']>;
+    href: string; // Removed NonNullable<InertiaLinkProps['href']> to simplify for now, logic remains
     icon?: LucideIcon | null;
     isActive?: boolean;
+    items?: NavItem[]; // Allow nesting
+    privilege?: string; // Dot notation for privilege check (e.g. 'dashboard.open')
 }
 
 export interface SharedData {

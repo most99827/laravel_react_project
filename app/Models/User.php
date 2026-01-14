@@ -22,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'group_id',
     ];
 
     /**
@@ -41,6 +42,11 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -48,5 +54,17 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function group()
+    {
+        return $this->belongsTo(SysAdminGroup::class, 'group_id');
+    }
+
+    protected $appends = ['privileges'];
+
+    public function getPrivilegesAttribute()
+    {
+        return $this->group ? $this->group->privilege : [];
     }
 }
