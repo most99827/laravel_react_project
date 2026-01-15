@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { ChevronDown, BookOpen, Folder, LayoutGrid, Menu, Search, Settings, Shield, Users } from 'lucide-react';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
@@ -8,12 +8,10 @@ import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-    NavigationMenu,
-    NavigationMenuItem,
-    NavigationMenuList,
     navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import {
@@ -35,6 +33,8 @@ import { useInitials } from '@/hooks/use-initials';
 import { cn, toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
+import { index as usersIndex } from '@/routes/users';
+import { index as securityGroupsIndex } from '@/routes/groups';
 
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
@@ -42,8 +42,28 @@ import AppLogoIcon from './app-logo-icon';
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
+        privilege: 'dashboard.open',
+    },
+    {
+        title: 'Setup',
+        href: '#',
+        icon: Settings,
+        items: [
+            {
+                title: 'Users',
+                href: usersIndex().url,
+                icon: Users,
+                privilege: 'setup.users',
+            },
+            {
+                title: 'Security Group',
+                href: securityGroupsIndex().url,
+                icon: Shield,
+                privilege: 'setup.security_groups',
+            }
+        ]
     },
 ];
 
@@ -70,8 +90,41 @@ interface AppHeaderProps {
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
+    const privileges = auth.privileges || {};
     const getInitials = useInitials();
     const { urlIsActive } = useActiveUrl();
+
+    const checkPrivilege = (privilege?: string) => {
+        if (!privilege) return true;
+
+        const keys = privilege.split('.');
+        let current: any = privileges;
+
+        for (const key of keys) {
+            if (current[key] === undefined) return false;
+            current = current[key];
+        }
+
+        return current == 1 || current === '1' || current === true;
+    };
+
+    const filterNavItems = (items: NavItem[]): NavItem[] => {
+        return items.filter((item) => {
+            // Check own privilege
+            const hasPrivilege = checkPrivilege(item.privilege);
+            if (!hasPrivilege) return false;
+
+            // Check children privilege
+            if (item.items) {
+                item.items = filterNavItems(item.items);
+                if (item.items.length === 0 && item.href === '#') return false;
+            }
+
+            return true;
+        });
+    };
+
+    const visibleNavItems = filterNavItems(mainNavItems);
     return (
         <>
             <div className="border-b border-sidebar-border/80">
@@ -101,20 +154,52 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">
                                         <div className="flex flex-col space-y-4">
-                                            {mainNavItems.map((item) => (
-                                                <Link
-                                                    key={item.title}
-                                                    href={item.href}
-                                                    className="flex items-center space-x-2 font-medium"
-                                                >
-                                                    {item.icon && (
-                                                        <Icon
-                                                            iconNode={item.icon}
-                                                            className="h-5 w-5"
-                                                        />
+                                            {visibleNavItems.map((item) => (
+                                                <div key={item.title}>
+                                                    {item.items ? (
+                                                        <div className="flex flex-col space-y-2">
+                                                            <div className="flex items-center space-x-2 font-medium opacity-80">
+                                                                {item.icon && (
+                                                                    <Icon
+                                                                        iconNode={item.icon}
+                                                                        className="h-5 w-5"
+                                                                    />
+                                                                )}
+                                                                <span>{item.title}</span>
+                                                            </div>
+                                                            <div className="ml-4 flex flex-col space-y-2 border-l border-neutral-200 pl-4 dark:border-neutral-700">
+                                                                {item.items.map((subItem) => (
+                                                                    <Link
+                                                                        key={subItem.title}
+                                                                        href={subItem.href}
+                                                                        className="flex items-center space-x-2 font-medium"
+                                                                    >
+                                                                        {subItem.icon && (
+                                                                            <Icon
+                                                                                iconNode={subItem.icon}
+                                                                                className="h-5 w-5"
+                                                                            />
+                                                                        )}
+                                                                        <span>{subItem.title}</span>
+                                                                    </Link>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <Link
+                                                            href={item.href}
+                                                            className="flex items-center space-x-2 font-medium"
+                                                        >
+                                                            {item.icon && (
+                                                                <Icon
+                                                                    iconNode={item.icon}
+                                                                    className="h-5 w-5"
+                                                                />
+                                                            )}
+                                                            <span>{item.title}</span>
+                                                        </Link>
                                                     )}
-                                                    <span>{item.title}</span>
-                                                </Link>
+                                                </div>
                                             ))}
                                         </div>
 
@@ -152,20 +237,72 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
-                        <NavigationMenu className="flex h-full items-stretch">
-                            <NavigationMenuList className="flex h-full items-stretch space-x-2">
-                                {mainNavItems.map((item, index) => (
-                                    <NavigationMenuItem
-                                        key={index}
-                                        className="relative flex h-full items-center"
-                                    >
+                    <div className="ml-6 hidden h-full items-center space-x-1 lg:flex">
+                        {visibleNavItems.map((item, index) => (
+                            <div
+                                key={index}
+                                className="relative flex h-full items-center"
+                            >
+                                {item.items ? (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger
+                                            className={cn(
+                                                navigationMenuTriggerStyle(),
+                                                'group h-9 cursor-pointer px-3',
+                                            )}
+                                        >
+                                            {item.icon && (
+                                                <Icon
+                                                    iconNode={item.icon}
+                                                    className="mr-2 h-4 w-4"
+                                                />
+                                            )}
+                                            {item.title}
+                                            <ChevronDown
+                                                className="relative top-[1px] ml-1 h-3 w-3 transition duration-300 group-data-[state=open]:rotate-180"
+                                                aria-hidden="true"
+                                            />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                            align="start"
+                                            className="w-48"
+                                        >
+                                            {item.items.map((subItem) => (
+                                                <DropdownMenuItem
+                                                    key={subItem.title}
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={subItem.href}
+                                                        className={cn(
+                                                            'flex w-full cursor-pointer items-center',
+                                                            urlIsActive(
+                                                                subItem.href,
+                                                            ) && 'font-bold',
+                                                        )}
+                                                    >
+                                                        {subItem.icon && (
+                                                            <Icon
+                                                                iconNode={
+                                                                    subItem.icon
+                                                                }
+                                                                className="mr-2 h-4 w-4"
+                                                            />
+                                                        )}
+                                                        {subItem.title}
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : (
+                                    <>
                                         <Link
                                             href={item.href}
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 urlIsActive(item.href) &&
-                                                    activeItemStyles,
+                                                activeItemStyles,
                                                 'h-9 cursor-pointer px-3',
                                             )}
                                         >
@@ -180,10 +317,10 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                         {urlIsActive(item.href) && (
                                             <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
                                         )}
-                                    </NavigationMenuItem>
-                                ))}
-                            </NavigationMenuList>
-                        </NavigationMenu>
+                                    </>
+                                )}
+                            </div>
+                        ))}
                     </div>
 
                     <div className="ml-auto flex items-center space-x-2">

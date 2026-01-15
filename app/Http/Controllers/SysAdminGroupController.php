@@ -65,4 +65,23 @@ class SysAdminGroupController extends Controller
 
         return redirect()->back()->with('success', 'Security Group deleted successfully.');
     }
+
+    public function search(Request $request)
+    {
+        $query = $request->get('query');
+
+        $groups = SysAdminGroup::query()
+            ->when($query, function ($q, $search) {
+                $q->where('group_name', 'like', '%' . $search . '%');
+            })
+            ->limit(10)
+            ->get(['id', 'group_name']);
+
+        return response()->json($groups->map(function ($group) {
+            return [
+                'value' => (string) $group->id,
+                'label' => $group->group_name,
+            ];
+        }));
+    }
 }

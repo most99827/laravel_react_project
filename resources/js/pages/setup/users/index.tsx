@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
 import { Plus, ArrowUpDown, Pencil, Trash2 } from 'lucide-react';
+import { useColumns } from './columns';
 
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,8 @@ interface Props {
     sys_admin_groups: SysAdminGroup[];
 }
 
+import { index, destroy } from '@/routes/users';
+
 export default function Index({ users, sys_admin_groups }: Props) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -37,7 +40,7 @@ export default function Index({ users, sys_admin_groups }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Users',
-            href: '/setup/users',
+            href: index().url,
         },
     ];
 
@@ -48,7 +51,7 @@ export default function Index({ users, sys_admin_groups }: Props) {
     };
 
     const handleDelete = (user: User) => {
-        router.delete(`/setup/users/${user.id}`, {
+        router.delete(destroy({ user: user.id }).url, {
             preserveScroll: true,
             onSuccess: () => {
                 handleCancel();
@@ -70,92 +73,13 @@ export default function Index({ users, sys_admin_groups }: Props) {
                 currentParams.delete(key);
             }
         });
-        router.get('/setup/users', Object.fromEntries(currentParams), {
+        router.get(index().url, Object.fromEntries(currentParams), {
             preserveState: true,
             preserveScroll: true,
         });
     };
 
-    const columns: ColumnDef<User>[] = [
-        {
-            accessorKey: 'name',
-            header: ({ column }) => {
-                return (
-                    <Button
-                        variant="ghost"
-                        onClick={() => onParamsChange({ sort: 'name', direction: 'asc' })}
-                    >
-                        Name
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                )
-            },
-            cell: ({ row }) => <div className="lowercase">{row.getValue("name")}</div>,
-        },
-        {
-            accessorKey: 'email',
-            header: ({ column }) => {
-                return (
-                    <Button
-                        variant="ghost"
-                        onClick={() => onParamsChange({ sort: 'email', direction: 'asc' })}
-                    >
-                        Email
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                )
-            },
-            cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
-        },
-        {
-            accessorKey: 'group.group_name', // Accessing nested property if loaded
-            header: 'Group',
-            cell: ({ row }) => <div>{(row.original as any).group?.group_name || 'No Group'}</div>,
-        },
-        {
-            accessorKey: 'created_at',
-            header: 'Created At',
-            cell: ({ row }) => new Date(row.getValue('created_at')).toLocaleDateString(),
-        },
-        {
-            id: 'actions',
-            header: 'Actions',
-            cell: ({ row }) => {
-                const user = row.original;
-                return (
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleEdit(user)}
-                            title="Edit"
-                        >
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-
-                        <ConfirmDialog
-                            trigger={
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    title="Delete"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            }
-                            description={
-                                <>
-                                    This action cannot be undone. This will permanently delete the user
-                                    <strong> {user.name}</strong> and remove their data from our servers.
-                                </>
-                            }
-                            onContinue={() => handleDelete(user)}
-                        />
-                    </div>
-                );
-            },
-        },
-    ];
+    const columns = useColumns({ onParamsChange, handleEdit, handleDelete });
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -181,6 +105,7 @@ export default function Index({ users, sys_admin_groups }: Props) {
 
                 {isCreating && (
                     <UserForm
+                        key={editingUser ? editingUser.id : 'new'}
                         user={editingUser}
                         sys_admin_groups={sys_admin_groups}
                         onSuccess={() => {

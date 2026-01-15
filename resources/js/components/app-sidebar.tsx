@@ -14,6 +14,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as usersIndex } from '@/routes/users';
 import { type NavItem } from '@/types';
 
 import AppLogo from './app-logo';
@@ -32,7 +33,7 @@ const mainNavItems: NavItem[] = [
         items: [
             {
                 title: 'Users',
-                href: '/setup/users',
+                href: usersIndex().url,
                 icon: Users,
                 privilege: 'setup.users',
             },

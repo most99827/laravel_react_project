@@ -19,6 +19,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->only(['index', 'store', 'update', 'destroy'])
         ->middleware('privilege:setup.users');
 
+    Route::get('setup/groups/search', [\App\Http\Controllers\SysAdminGroupController::class, 'search'])
+        ->name('groups.search');
+
     Route::resource('setup/groups', \App\Http\Controllers\SysAdminGroupController::class)
         ->only(['index', 'store', 'update', 'destroy'])
         ->middleware('privilege:setup.security_groups');

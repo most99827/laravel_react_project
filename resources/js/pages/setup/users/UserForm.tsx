@@ -1,4 +1,7 @@
 import { useForm } from '@inertiajs/react';
+import axios from 'axios';
+import { useMemo } from 'react';
+import { store, update } from '@/routes/users';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,11 +40,21 @@ export default function UserForm({ user, sys_admin_groups, onSuccess, onCancel }
         };
 
         if (user) {
-            put(`/setup/users/${user.id}`, options);
+            put(update({ user: user.id }).url, options);
         } else {
-            post('/setup/users', options);
+            post(store().url, options);
         }
     };
+
+    const loadGroups = async (query: string) => {
+        const response = await axios.get('/setup/groups/search', { params: { query } });
+        return response.data;
+    };
+
+    const groupOptions = useMemo(() => sys_admin_groups.map(group => ({
+        value: group.id.toString(),
+        label: group.group_name
+    })), [sys_admin_groups]);
 
     return (
         <Card className="mt-8 border-2 border-primary/20">
@@ -96,11 +109,10 @@ export default function UserForm({ user, sys_admin_groups, onSuccess, onCancel }
                             <SearchableSelect
                                 value={data.group_id}
                                 onValueChange={(value) => setData('group_id', value)}
-                                options={sys_admin_groups.map(group => ({
-                                    value: group.id.toString(),
-                                    label: group.group_name
-                                }))}
+                                options={groupOptions}
+                                loadOptions={loadGroups}
                                 placeholder="Select a Group"
+                                disabled={false}
                             />
                             {errors.group_id && <span className="text-red-500 text-sm">{errors.group_id}</span>}
                         </div>

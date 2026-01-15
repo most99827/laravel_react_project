@@ -51,6 +51,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                             <SidebarMenuSubItem key={subItem.title}>
                                                 <SidebarMenuSubButton asChild isActive={urlIsActive(subItem.href)}>
                                                     <Link href={subItem.href}>
+                                                        {subItem.icon && <subItem.icon />}
                                                         <span>{subItem.title}</span>
                                                     </Link>
                                                 </SidebarMenuSubButton>
